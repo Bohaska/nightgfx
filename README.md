@@ -7,6 +7,8 @@ main.py currently automatically makes, from an 8bpp sprite
   + 239-240   Flashing Red
   + 241-244   Flashing Yellow
 
+I tested the mask files for infra06.png and they perfectly matched NightGFX source code files except I haven't added palette yet, I'll work on that when I get time.
+
 dependencies: pillow, numpy
 
 usage: 
