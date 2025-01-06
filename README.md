@@ -7,6 +7,8 @@ main.py currently automatically makes, from an 8bpp sprite
   + 239-240   Flashing Red
   + 241-244   Flashing Yellow
 
+main function is named `process_image`, set `automatic_lights = True` to have it automatically attempt to convert windows to lights and darken the image
+
 dependencies: pillow, numpy
 
 usage: 
