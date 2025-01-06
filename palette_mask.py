@@ -14,13 +14,9 @@ def desaturate_color(color):
 def process_image(input_image_path):
     # Open the input image
     if input_image_path[-4:] == ".png":
-        input_image_path = input_image_path[:-4]
-    img = Image.open(input_image_path + ".png")
-
-    transparent_colors = [
-        (0, 0, 255),  # Blue
-        (255, 255, 255)  # White
-    ]
+        img = Image.open(input_image_path)
+    else:
+        img = Image.open(input_image_path + ".png")
 
     # Define the target colors
     cc1_palette_colors = [
@@ -34,34 +30,8 @@ def process_image(input_image_path):
         205,
     ]
 
-    cc1_colors = [
-        (8, 24, 88),  # #081858
-        (12, 36, 104),  # #0c2468
-        (20, 52, 124),  # #14347c
-        (28, 68, 140),  # #1c448c
-        (40, 92, 164),  # #285ca4
-        (56, 120, 188),  # #3878bc
-        (72, 152, 216),  # #4898d8
-        (100, 172, 224)  # #64ace0
-    ]
-
     cc1_mask_color = 202
 
-    preserve_colors = [
-        (64, 0, 0),  # 239
-        (255, 0, 0),  # 240
-        (48, 48, 0),  # 241
-        (64, 64, 0),  # 242
-        (80, 80, 0),  # 243
-        (255, 255, 0),  # 244
-        (252, 60, 0),  # 232
-        (252, 84, 0),  # 233
-        (252, 104, 0),  # 234
-        (252, 124, 0),  # 235
-        (252, 148, 0),  # 236
-        (252, 172, 0),  # 237
-        (252, 196, 0),  # 238
-    ]
     preserve_palette_colors = [
         239,
         240,
@@ -97,12 +67,11 @@ def process_image(input_image_path):
     result_img = Image.fromarray(result_img_data, mode="P")
     result_img.putpalette(data=PALETTE)
 
-    mask_path = input_image_path + "--mask.png"
+    mask_path = input_image_path + "--palette--mask.png"
     # Save the resulting image
     result_img.save(mask_path)
     print(f"Processed mask saved to {mask_path}")
-
-    bpp_img = img.convert('RGBA')
+"""
     bpp_img_data = np.array(bpp_img)
     for color in transparent_colors:
         mask = np.all(bpp_img_data[:, :, :3] == color, axis=-1)  # Find pixels that match the color
@@ -119,7 +88,7 @@ def process_image(input_image_path):
 
     path = input_image_path + "--32bpp.png"
     bpp_result_img.save(path)
-    print(f"Processed 32bpp saved to {path}")
+    print(f"Processed 32bpp saved to {path}")"""
 
 # Example usage
 input_image_path = input('Input image path of object\n(example: infra06, infra06.png)\n> ')  # Provide the input image path
