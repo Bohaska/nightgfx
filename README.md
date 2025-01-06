@@ -2,12 +2,10 @@ A small script to help make graphic files for [NightGFX](https://www.tt-forums.n
  
 main.py currently automatically makes, from an 8bpp sprite 
 + 32bpp sprite with transparent backgrounds and desaturated company color 1  (cc1)
-+ 8bpp mask files that replace cc1 with color index 202 and preserves following colors:
++ 8bpp mask files with palette, that replace cc1 with color index 202 and preserves following colors:
   + 232-238   Fire Cycle
   + 239-240   Flashing Red
   + 241-244   Flashing Yellow
-
-I tested the mask files for infra06.png and they perfectly matched NightGFX source code files except I haven't added palette yet, I'll work on that when I get time.
 
 dependencies: pillow, numpy
 
