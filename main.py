@@ -8,13 +8,18 @@ def desaturate_color(color):
     return avg, avg, avg  # Return the desaturated color
 
 
-def process_image(input_image_path):
+def process_image(input_image_path, automatic_lights=False, output_image_path=None):
     # Open the input image
-    if input_image_path[-4:] == ".png":
+    if input_image_path[-4:].lower() == ".png":
         input_image_path = input_image_path[:-4]
+    if output_image_path is None:
+        output_image_path = input_image_path
     img = Image.open(input_image_path + ".png")
 
     PALETTE = img.getpalette()
+
+    def palette_to_rgb(color_index):
+        return PALETTE[color_index * 3: color_index * 3 + 3]
 
     transparent_colors = [
         (0, 0, 255),  # Blue
@@ -54,6 +59,32 @@ def process_image(input_image_path):
 
     preserve_palette_colors = [239, 240, 241, 242, 243, 244, 232, 233, 234, 235, 236, 237, 238]
 
+    light_colors = {64: 68, 65: 68, 66: 69, 67: 69, 68: 69, 69: 69}
+
+    window_colors = {128: 64, 129: 65, 130: 66, 131: 67, 132: 67, 133: 68, 134: 68, 135: 69}
+
+    red_light_colors = [182, 183, 184]
+
+    window_rgb_colors = []
+    for color, new_color in window_colors.items():
+        window_rgb_color = palette_to_rgb(color)
+        light_rgb_color = palette_to_rgb(new_color)
+        window_rgb_colors.append([tuple(window_rgb_color), tuple(light_rgb_color)])
+
+    light_rgb_colors = []
+    for color, new_color in light_colors.items():
+        a_color = palette_to_rgb(color)
+        b_color = palette_to_rgb(new_color)
+        light_rgb_colors.append([tuple(a_color), tuple(b_color)])
+
+    red_rgb_colors = []
+    for color in red_light_colors:
+        red_rgb_colors.append(tuple(palette_to_rgb(color)))
+
+    preserve_rgb_colors = []
+    for color in preserve_palette_colors:
+        preserve_rgb_colors.append(tuple(palette_to_rgb(color)))
+
     # Create an array of the image pixels
     img_data = np.array(img)
 
@@ -73,11 +104,16 @@ def process_image(input_image_path):
         color_mask = (img_data == color)
         result_img_data[color_mask] = cc2_mask_color  # Paste cc1 mask color into mask
 
+    if automatic_lights:
+        for color, new_color in light_colors.items():
+            color_mask = (img_data == color)
+            result_img_data[color_mask] = new_color
+
     # Convert the result back to an image
     result_img = Image.fromarray(result_img_data, mode="P")
     result_img.putpalette(data=PALETTE)
 
-    mask_path = input_image_path + "--mask.png"
+    mask_path = output_image_path + "--mask.png"
     # Save the resulting image
     result_img.save(mask_path)
     print(f"Processed mask saved to {mask_path}")
@@ -95,10 +131,44 @@ def process_image(input_image_path):
         desaturated_color = desaturate_color(cc_color)  # Get the desaturated color
         bpp_img_data[mask, :3] = desaturated_color  # Apply desaturation to the RGB channels
 
+    light_masks = []
+    window_masks = []
+    red_masks = []
+    preserve_masks = []
+    if automatic_lights:
+        for color, new_color in light_rgb_colors:
+            mask = np.all(bpp_img_data[:, :, :3] == color, axis=-1)
+            light_masks.append([mask, color, new_color])
+        for color, new_color in window_rgb_colors:
+            mask = np.all(bpp_img_data[:, :, :3] == color, axis=-1)
+            window_masks.append([mask, color, new_color])
+        for color in red_rgb_colors:
+            mask = np.all(bpp_img_data[:, :, :3] == color, axis=-1)
+            red_masks.append([mask, color])
+        for color in preserve_rgb_colors:
+            mask = np.all(bpp_img_data[:, :, :3] == color, axis=-1)
+            preserve_masks.append([mask, color])
+
 
     bpp_result_img = Image.fromarray(bpp_img_data)
+    if automatic_lights:
+        black_overlay = Image.new("RGBA", bpp_result_img.size, (0, 0, 0, int(255 * 0.65)))
+        bpp_result_img = Image.alpha_composite(bpp_result_img, black_overlay)
+        bpp_img_data = np.array(bpp_result_img)
+        mask = np.all(bpp_img_data == (0, 0, 0, int(255 * 0.65)), axis=-1)
+        bpp_img_data[mask] = (0, 0, 0, 0)  # Set them to fully transparent
+        brightness = 0.75
+        for mask, color, new_color in window_masks:
+            bpp_img_data[mask, :3] = (new_color[0] * brightness, new_color[1] * brightness, new_color[2] * brightness)
+        for mask, color, new_color in light_masks:
+            bpp_img_data[mask, :3] = new_color
+        for mask, new_color in red_masks:
+            bpp_img_data[mask, :3] = new_color
+        for mask, new_color in preserve_masks:
+            bpp_img_data[mask, :3] = new_color
+        bpp_result_img = Image.fromarray(bpp_img_data)
 
-    path = input_image_path + "--32bpp.png"
+    path = output_image_path + "--32bpp.png"
     bpp_result_img.save(path)
     print(f"Processed 32bpp saved to {path}")
 
@@ -106,3 +176,12 @@ def process_image(input_image_path):
 input_image_path = input('Input image path of object\n(example: infra06, infra06.png)\n> ')  # Provide the input image path
 
 process_image(input_image_path)
+
+# Example automatic conversion
+input_folder_path = input('Input folder name of images to convert\n> ')
+from os import listdir, mkdir
+from os.path import isfile, join
+onlyfiles = [f for f in listdir(input_folder_path) if isfile(join(input_folder_path, f)) and f[-4:].lower() == ".png"]
+mkdir(f"{input_folder_path}/nightgfx")
+for file in onlyfiles:
+    process_image(f"{input_folder_path}/{file}", automatic_lights=True, output_image_path=f"{input_folder_path}/nightgfx/{file[:-4]}")
