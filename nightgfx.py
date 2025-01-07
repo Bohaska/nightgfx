@@ -8,16 +8,10 @@ def desaturate_color(color):
     return avg, avg, avg  # Return the desaturated color
 
 
-def process_image(input_image_path, automatic_lights=False, output_image_path=None):
-    # Open the input image
-    if input_image_path[-4:].lower() == ".png":
-        input_image_path = input_image_path[:-4]
-    if output_image_path is None:
-        output_image_path = input_image_path
-    img = Image.open(input_image_path + ".png")
+def process_image_pil(input_image, automatic_lights=None):
+    img = input_image
 
     PALETTE = img.getpalette()
-
     def palette_to_rgb(color_index):
         return PALETTE[color_index * 3: color_index * 3 + 3]
 
@@ -113,10 +107,7 @@ def process_image(input_image_path, automatic_lights=False, output_image_path=No
     result_img = Image.fromarray(result_img_data, mode="P")
     result_img.putpalette(data=PALETTE)
 
-    mask_path = output_image_path + "--mask.png"
-    # Save the resulting image
-    result_img.save(mask_path)
-    print(f"Processed mask saved to {mask_path}")
+    print(f"Created mask")
 
     bpp_img = img.convert('RGBA')
     bpp_img_data = np.array(bpp_img)
@@ -149,7 +140,6 @@ def process_image(input_image_path, automatic_lights=False, output_image_path=No
             mask = np.all(bpp_img_data[:, :, :3] == color, axis=-1)
             preserve_masks.append([mask, color])
 
-
     bpp_result_img = Image.fromarray(bpp_img_data)
     if automatic_lights:
         black_overlay = Image.new("RGBA", bpp_result_img.size, (0, 0, 0, int(255 * 0.65)))
@@ -168,9 +158,26 @@ def process_image(input_image_path, automatic_lights=False, output_image_path=No
             bpp_img_data[mask, :3] = new_color
         bpp_result_img = Image.fromarray(bpp_img_data)
 
-    path = output_image_path + "--32bpp.png"
-    bpp_result_img.save(path)
-    print(f"Processed 32bpp saved to {path}")
+    print(f"Created 32bpp night image")
+    return result_img, bpp_result_img
+
+def process_image(input_image_path, automatic_lights=None, output_mask_path=None, output_image_path=None,):
+    # Open the input image
+    if input_image_path[-4:].lower() == ".png":
+        input_image_path = input_image_path[:-4]
+    img = Image.open(input_image_path + ".png")
+
+    mask_result_img, bpp_result_img, = process_image_pil(img, automatic_lights)
+
+    if output_mask_path is None:
+        output_mask_path = input_image_path + "--mask.png"
+    # Save the resulting image
+    mask_result_img.save(output_mask_path)
+    print(f"Processed mask saved to {output_mask_path}")
+    if output_image_path is None:
+        output_image_path = input_image_path + "--32bpp.png"
+    bpp_result_img.save(output_image_path)
+    print(f"Processed 32bpp saved to {output_image_path}")
 
 # Example usage
 input_image_path = input('Input image path of object\n(example: infra06, infra06.png)\n> ')  # Provide the input image path
